@@ -1,4 +1,5 @@
 #include <linux/cdev.h>
+#include <linux/compiler.h>
 #include <linux/device.h>
 #include <linux/fs.h>
 #include <linux/init.h>
@@ -26,17 +27,23 @@ static DEFINE_MUTEX(fib_mutex);
 
 static long long fib_sequence(long long k)
 {
-    /* FIXME: use clz/ctz and fast algorithms to speed up */
-    long long f[k + 2];
+#define BITS sizeof(long long) * 8
+    if (unlikely(!k))
+        return 0;
 
-    f[0] = 0;
-    f[1] = 1;
+    long long fcur = 1, fnext = 1;
 
-    for (int i = 2; i <= k; i++) {
-        f[i] = f[i - 1] + f[i - 2];
+    /* off is offset of checking bit from MSB */
+    for (int off = __builtin_clzll(k) + 1; likely(off < BITS); off++) {
+        long long t1 = fcur * ((fnext << 1) - fcur);
+        long long t2 = fcur * fcur + fnext * fnext;
+        long long mask = ((k >> (BITS - 1 - off)) & 1) - 1;
+        fcur = (t1 & mask) + (t2 & ~mask);
+        fnext = t2 + (t1 & ~mask);
     }
 
-    return f[k];
+    return fcur;
+#undef BITS
 }
 
 static int fib_open(struct inode *inode, struct file *file)
