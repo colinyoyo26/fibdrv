@@ -123,48 +123,55 @@ static inline void bn_mul(bn *result, bn *a, bn *b)
 }
 
 /* it will dynamically resize */
-static inline void bn_sll(bn *a, unsigned long long sha)
+static inline void bn_sll(bn *result, bn *a, unsigned long long sha)
 {
     /* quot = sha / N_BITS (bits) */
     unsigned long long quot = sha >> N_BITS_TZ;
     unsigned long long rem = sha & (N_BITS - 1);
 
-    if (bn_capacity(a) < bn_size(a) + quot + 1)
-        bn_resize(a, bn_size(a) + quot + 1);
+    if (bn_capacity(result) < bn_size(a) + quot + 1)
+        bn_resize(result, bn_size(a) + quot + 1);
     /* new size after shift */
-    a->size += quot + (__builtin_clz(a->ptr[a->size - 1]) < rem);
+    result->size =
+        bn_size(a) + quot + (__builtin_clzll(a->ptr[a->size - 1]) < rem);
 
-    int i = bn_size(a) - 1;
+    int i = bn_size(result) - 1;
     for (; i > quot; i--) {
+        /* performance can be improve here */
         unsigned long long rhs_bits = a->ptr[i - quot - 1] >> (N_BITS - rem);
-        a->ptr[i] = (a->ptr[i - quot] << rem) | rhs_bits;
+        result->ptr[i] = (a->ptr[i - quot] << rem) | rhs_bits;
     }
 
-    a->ptr[i--] = a->ptr[0] << rem;
-    for (; i >= 0; a->ptr[i--] = 0)
+    result->ptr[i--] = a->ptr[0] << rem;
+    for (; i >= 0; result->ptr[i--] = 0)
         ;
 }
 
-static inline void bn_srl(bn *a, unsigned long long sha)
+static inline void bn_srl(bn *result, bn *a, unsigned long long sha)
 {
     /* quot = sha / N_BITS (bits) */
     unsigned long long quot = sha >> N_BITS_TZ;
     unsigned long long rem = sha & (N_BITS - 1);
     const unsigned long long mask = (1 << rem) - 1;
+    unsigned long long newsize =
+        bn_size(a) - quot - (rem >= __builtin_clzll(a->ptr[bn_size(a) - 1]));
+
+    if (bn_capacity(result) < newsize)
+        bn_resize(result, newsize);
+
+    result->size = newsize;
 
     int i = 0;
     for (; i < bn_size(a) - quot - 1; i++) {
         /* performance can be improve here */
         unsigned long long lhs_bits = (a->ptr[i + quot + 1] & mask)
                                       << (N_BITS - rem);
-        a->ptr[i] = lhs_bits | (a->ptr[i + quot] >> rem);
+        result->ptr[i] = lhs_bits | (a->ptr[i + quot] >> rem);
     }
 
-    a->ptr[i++] = a->ptr[bn_size(a) - 1] >> rem;
-    for (; i < bn_size(a); a->ptr[i++] = 0)
+    result->ptr[i++] = a->ptr[bn_size(a) - 1] >> rem;
+    for (; i < newsize; result->ptr[i++] = 0)
         ;
-    /* new size after shift */
-    a->size -= quot + (N_BITS - __builtin_clzll(a->ptr[a->size - 1]) <= rem);
 }
 
 static inline char *bn_hex(bn *a)
