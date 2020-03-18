@@ -7,6 +7,9 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
+#include <linux/uaccess.h>
+
+#include "bignum.h"
 
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_AUTHOR("National Cheng Kung University, Taiwan");
@@ -18,13 +21,14 @@ MODULE_VERSION("0.1");
 /* MAX_LENGTH is set to 92 because
  * ssize_t can't fit the number > 92
  */
-#define MAX_LENGTH 92
+#define MAX_LENGTH 100
 
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
 
+#ifndef BN
 static long long fib_sequence(long long k)
 {
 #define BITS sizeof(long long) * 8
@@ -45,6 +49,30 @@ static long long fib_sequence(long long k)
     return fcur;
 #undef BITS
 }
+#else
+static char *fib_sequence(long long k)
+{
+#define BITS sizeof(long long) * 8
+
+    bn fcur, fnext, r;
+    bn_init(&fcur);
+    bn_init(&fnext);
+    bn_init(&r);
+    bn_assign(&fcur, 0);
+    bn_assign(&fnext, 1);
+
+    for (int i = 0; i < k; i++) {
+        bn_add(&r, &fnext, &fcur);
+        bn tem = fcur;
+        fcur = fnext;
+        fnext = r;
+        r = tem;
+    }
+
+    return bn_hex(&fcur);
+#undef BITS
+}
+#endif
 
 static int fib_open(struct inode *inode, struct file *file)
 {
@@ -67,7 +95,11 @@ static ssize_t fib_read(struct file *file,
                         size_t size,
                         loff_t *offset)
 {
-    return (ssize_t) fib_sequence(*offset);
+    char *fibnum = fib_sequence(*offset);
+    int len = strlen(fibnum);
+    copy_to_user(buf, fibnum, (len + 1) * sizeof(char));
+    kfree(fibnum);
+    return len;
 }
 
 /* write operation is skipped */
