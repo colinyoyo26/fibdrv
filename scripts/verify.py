@@ -17,12 +17,12 @@ for r in result:
     if (r.find('Reading') != -1):
         result_split.append(r.split(' '))
         k = int(result_split[-1][5].split(',')[0])
-        f0 = int(result_split[-1][9].split('.')[0])
+        f0 = result_split[-1][9].split('.')[0]
         dics.append((k, f0))
 for i in dics:
     fib = i[1] 
-    if (expect[i[0]] != fib):
+    if (format(expect[i[0]], 'X') != fib):
         print('f(%s) fail' % str(i[0]))
         print('input: %s' %(fib))
-        print('expected: %s' %(expect[i[0]]))
+        print('expected: %s' %format(expect[i[0]], 'X'))
         exit()
