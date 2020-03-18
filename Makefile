@@ -9,6 +9,11 @@ PWD := $(shell pwd)
 
 GIT_HOOKS := .git/hooks/applied
 
+BN ?= 1
+ifeq ("$(BN)","1")
+	ccflags-y += -DBN
+endif
+
 all: $(GIT_HOOKS) client
 	$(MAKE) -C $(KDIR) M=$(PWD) modules
 
@@ -37,5 +42,5 @@ check: all
 	$(MAKE) load
 	sudo ./client > out
 	$(MAKE) unload
-	@diff -u out scripts/expected.txt && $(call pass)
+	@diff -u out scripts/expected_hex.txt && $(call pass)
 	@scripts/verify.py
