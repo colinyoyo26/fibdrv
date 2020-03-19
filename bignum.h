@@ -44,12 +44,14 @@ static inline unsigned long long bn_capacity(bn *a)
     /* equal to ksize(a->ptr) / sizeof(unsigned long long) */
     return a->capacity;
 }
-static inline void bn_swap(bn **a, bn **b)
-{
-    bn *tem = *a;
-    *a = *b;
-    *b = tem;
-}
+
+
+#define bn_swap(a, b)      \
+    ({                     \
+        typeof(*a) t = *a; \
+        *a = *b;           \
+        *b = t;            \
+    })
 
 /* retrun non-zero if a is greater than b */
 static inline int bn_greater(bn *a, bn *b)
