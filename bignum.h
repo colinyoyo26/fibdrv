@@ -47,11 +47,11 @@ static inline unsigned long long bn_capacity(bn *a)
 
 
 #define bn_swap(a, b)      \
-    ({                     \
+    do {                   \
         typeof(*a) t = *a; \
         *a = *b;           \
         *b = t;            \
-    })
+    } while (0)
 
 /* retrun non-zero if a is greater than b */
 static inline int bn_greater(bn *a, bn *b)
