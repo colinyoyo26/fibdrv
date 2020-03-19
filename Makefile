@@ -10,8 +10,14 @@ PWD := $(shell pwd)
 GIT_HOOKS := .git/hooks/applied
 
 BN ?= 1
+FAST ?= 1
+
 ifeq ("$(BN)","1")
 	ccflags-y += -DBN
+endif
+
+ifeq ("$(FAST)","1")
+	ccflags-y += -DFAST
 endif
 
 all: $(GIT_HOOKS) client
