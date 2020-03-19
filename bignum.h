@@ -142,7 +142,8 @@ static inline void bn_sll(bn *result, bn *a, unsigned long long sha)
     int i = bn_size(result) - 1;
     for (; i > quot; i--) {
         /* performance can be improve here */
-        unsigned long long rhs_bits = a->ptr[i - quot - 1] >> (N_BITS - rem);
+        unsigned long long rhs_bits =
+            rem ? a->ptr[i - quot - 1] >> (N_BITS - rem) : 0;
         result->ptr[i] = (a->ptr[i - quot] << rem) | rhs_bits;
     }
 
@@ -168,8 +169,8 @@ static inline void bn_srl(bn *result, bn *a, unsigned long long sha)
     int i = 0;
     for (; i < bn_size(a) - quot - 1; i++) {
         /* performance can be improve here */
-        unsigned long long lhs_bits = (a->ptr[i + quot + 1] & mask)
-                                      << (N_BITS - rem);
+        unsigned long long lhs_bits =
+            rem ? (a->ptr[i + quot + 1] & mask) << (N_BITS - rem) : 0;
         result->ptr[i] = lhs_bits | (a->ptr[i + quot] >> rem);
     }
 
