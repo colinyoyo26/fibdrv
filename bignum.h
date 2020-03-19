@@ -75,7 +75,9 @@ static inline int bn_greater(bn *a, bn *b)
 
 static inline void bn_add(bn *result, bn *a, bn *b)
 {
-    unsigned int size = MAX(bn_size(a), bn_size(b));
+    if (bn_size(a) < bn_size(b))
+        bn_swap(&a, &b);
+    unsigned int size = bn_size(a);
 
     /* prevent potential overflow */
     if (bn_capacity(result) < size + 1)
@@ -118,12 +120,24 @@ static inline void bn_sub(bn *result, bn *a, bn *b)
     result->size = bn_size(a) - !(result->ptr[bn_size(a) - 1]);
 }
 
+static inline void bn_sll(bn *result, bn *a, unsigned long long sha);
 static inline void bn_mul(bn *result, bn *a, bn *b)
 {
-    if (bn_capacity(result) < bn_size(a) + bn_size(b)) {
+    if (bn_capacity(result) < bn_size(a) + bn_size(b))
         bn_resize(result, bn_size(a) + bn_size(b));
-        result->size = bn_size(a) + bn_size(b);
-    }
+
+    bn tem;
+    bn_init(&tem);
+    bn_assign(result, 0);
+
+    unsigned long long check_bit = 1;
+    for (int i = 0; i < bn_size(a); i++, check_bit = 1)
+        for (int j = 0; j < N_BITS; j++, check_bit <<= 1)
+            if (check_bit & a->ptr[i]) {
+                bn_sll(&tem, b, (i << N_BITS_TZ) + j);
+                bn_add(result, result, &tem);
+            }
+    kfree(tem.ptr);
 }
 
 /* it will dynamically resize */
