@@ -83,14 +83,17 @@ static inline void bn_add(bn *result, bn *a, bn *b)
 
     int i, carry = 0;
     for (i = 0; i < bn_size(b); i++) {
+        unsigned long long a_val = a->ptr[i];
+        unsigned long long b_val = b->ptr[i];
         /* it's fine to overflow */
-        result->ptr[i] = a->ptr[i] + b->ptr[i] + carry;
+        result->ptr[i] = a_val + b_val + carry;
         /* thinking about strength reduction */
-        carry = ((a->ptr[i] + carry > ~b->ptr[i]) || (a->ptr[i] > ~carry));
+        carry = ((a_val + carry > ~b_val) || (a_val > ~carry));
     }
     for (; i < size; i++) {
-        result->ptr[i] = a->ptr[i] + carry;
-        carry = (carry > ~a->ptr[i]);
+        unsigned long long a_val = a->ptr[i];
+        result->ptr[i] = a_val + carry;
+        carry = (carry > ~a_val);
     }
     size += carry;
     result->size = size;
@@ -106,10 +109,11 @@ static inline void bn_sub(bn *result, bn *a, bn *b)
         bn_resize(result, bn_size(a));
 
     for (int i = 0, borrow = 0; i < bn_size(a); i++) {
+        unsigned long long a_val = a->ptr[i];
         unsigned long long sub = bn_size(b) > i ? b->ptr[i] : 0;
         /* it's fine to overflow */
-        result->ptr[i] = a->ptr[i] - sub - borrow;
-        borrow = (a->ptr[i] < sub + borrow);
+        result->ptr[i] = a_val - sub - borrow;
+        borrow = (a_val < sub + borrow);
     }
     result->size = bn_size(a) - !(result->ptr[bn_size(a) - 1]);
 }
