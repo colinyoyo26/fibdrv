@@ -21,7 +21,7 @@ MODULE_VERSION("0.1");
 /* MAX_LENGTH is set to 92 because
  * ssize_t can't fit the number > 92
  */
-#define MAX_LENGTH 100
+#define MAX_LENGTH 10000
 
 static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
@@ -50,6 +50,8 @@ static long long fib_sequence(long long k)
 #undef BITS
 }
 #else
+
+#ifndef FAST
 static char *fib_sequence(long long k)
 {
 #define BITS sizeof(long long) * 8
@@ -72,6 +74,56 @@ static char *fib_sequence(long long k)
     return bn_hex(&fcur);
 #undef BITS
 }
+#else
+static char *fib_sequence(long long k)
+{
+#define BITS sizeof(long long) * 8
+    unsigned long long mask = 1ull << (BITS - 1);
+    unsigned int off = __builtin_clzll(k) + 1;
+    mask >>= off;
+
+    bn fcur, fnext, t1, t2;
+    bn fnext2, fcur_sqrt, fnext_sqrt, tem1;
+    bn_init(&fcur);
+    bn_init(&fnext);
+    bn_init(&fnext2);
+    bn_init(&t1);
+    bn_init(&t2);
+    bn_init(&tem1);
+    bn_init(&fcur_sqrt);
+    bn_init(&fnext_sqrt);
+
+    bn_assign(&fcur, 1);
+    bn_assign(&fnext, 1);
+
+    if (unlikely(k <= 1)) {
+        bn_assign(&fcur, k);
+        return bn_hex(&fcur);
+    }
+
+    for (; mask; mask >>= 1) {
+        bn_sll(&fnext2, &fnext, 1);
+        bn_sub(&tem1, &fnext2, &fcur);
+        bn_mul(&t1, &tem1, &fcur);
+        bn_mul(&fcur_sqrt, &fcur, &fcur);
+        bn_mul(&fnext_sqrt, &fnext, &fnext);
+        bn_add(&t2, &fcur_sqrt, &fnext_sqrt);
+        bn tem2 = fcur, tem3 = fnext;
+        fcur = t1, fnext = t2;
+        t1 = tem2, t2 = tem3;
+        if (k & mask) {
+            bn_add(&t1, &fcur, &fnext);
+            tem2 = fcur;
+            fcur = fnext;
+            fnext = t1;
+            t1 = tem2;
+        }
+    }
+
+    return bn_hex(&fcur);
+#undef BITS
+}
+#endif
 #endif
 
 static int fib_open(struct inode *inode, struct file *file)
