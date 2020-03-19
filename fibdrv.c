@@ -31,7 +31,6 @@ static DEFINE_MUTEX(fib_mutex);
 #ifndef BN
 static long long fib_sequence(long long k)
 {
-#define BITS sizeof(long long) * 8
     if (unlikely(!k))
         return 0;
 
@@ -47,15 +46,12 @@ static long long fib_sequence(long long k)
     }
 
     return fcur;
-#undef BITS
 }
 #else
 
 #ifndef FAST
 static char *fib_sequence(long long k)
 {
-#define BITS sizeof(long long) * 8
-
     bn fcur, fnext, r;
     bn_init(&fcur);
     bn_init(&fnext);
@@ -72,12 +68,10 @@ static char *fib_sequence(long long k)
     }
 
     return bn_hex(&fcur);
-#undef BITS
 }
 #else
 static char *fib_sequence(long long k)
 {
-#define BITS sizeof(long long) * 8
     unsigned long long mask = 1ull << (BITS - 1);
     unsigned int off = __builtin_clzll(k) + 1;
     mask >>= off;
@@ -121,7 +115,6 @@ static char *fib_sequence(long long k)
     }
 
     return bn_hex(&fcur);
-#undef BITS
 }
 #endif
 #endif

@@ -7,9 +7,9 @@ typedef struct bignum {
 } bn;
 
 /* number of bits of unsigned long long type */
-#define N_BITS sizeof(unsigned long long) * 8
-/* log_2(N_BITS) */
-#define N_BITS_TZ __builtin_ctz(N_BITS)
+#define BITS sizeof(unsigned long long) * 8
+/* log_2(BITS) */
+#define BITS_TZ __builtin_ctz(BITS)
 
 /* If p is NULL, krealloc behaves exactly like kmalloc */
 static inline void bn_resize(bn *a, unsigned long long size)
@@ -54,7 +54,7 @@ static inline void bn_swap(bn **a, bn **b)
 /* retrun non-zero if a is greater than b */
 static inline int bn_greater(bn *a, bn *b)
 {
-#define SIGN_BIT 1ull << (N_BITS - 1)
+#define SIGN_BIT 1ull << (BITS - 1)
     if ((bn_size(a) > bn_size(b)))
         return 1;
     for (int i = bn_size(a) - 1; i > -1; i--) {
@@ -132,9 +132,9 @@ static inline void bn_mul(bn *result, bn *a, bn *b)
 
     unsigned long long check_bit = 1;
     for (int i = 0; i < bn_size(a); i++, check_bit = 1)
-        for (int j = 0; j < N_BITS; j++, check_bit <<= 1)
+        for (int j = 0; j < BITS; j++, check_bit <<= 1)
             if (check_bit & a->ptr[i]) {
-                bn_sll(&tem, b, (i << N_BITS_TZ) + j);
+                bn_sll(&tem, b, (i << BITS_TZ) + j);
                 bn_add(result, result, &tem);
             }
     kfree(tem.ptr);
@@ -143,9 +143,9 @@ static inline void bn_mul(bn *result, bn *a, bn *b)
 /* it will dynamically resize */
 static inline void bn_sll(bn *result, bn *a, unsigned long long sha)
 {
-    /* quot = sha / N_BITS (bits) */
-    unsigned long long quot = sha >> N_BITS_TZ;
-    unsigned long long rem = sha & (N_BITS - 1);
+    /* quot = sha / BITS (bits) */
+    unsigned long long quot = sha >> BITS_TZ;
+    unsigned long long rem = sha & (BITS - 1);
 
     if (bn_capacity(result) < bn_size(a) + quot + 1)
         bn_resize(result, bn_size(a) + quot + 1);
@@ -157,7 +157,7 @@ static inline void bn_sll(bn *result, bn *a, unsigned long long sha)
     for (; i > quot; i--) {
         /* performance can be improve here */
         unsigned long long rhs_bits =
-            rem ? a->ptr[i - quot - 1] >> (N_BITS - rem) : 0;
+            rem ? a->ptr[i - quot - 1] >> (BITS - rem) : 0;
         result->ptr[i] = (a->ptr[i - quot] << rem) | rhs_bits;
     }
 
@@ -168,9 +168,9 @@ static inline void bn_sll(bn *result, bn *a, unsigned long long sha)
 
 static inline void bn_srl(bn *result, bn *a, unsigned long long sha)
 {
-    /* quot = sha / N_BITS (bits) */
-    unsigned long long quot = sha >> N_BITS_TZ;
-    unsigned long long rem = sha & (N_BITS - 1);
+    /* quot = sha / BITS (bits) */
+    unsigned long long quot = sha >> BITS_TZ;
+    unsigned long long rem = sha & (BITS - 1);
     const unsigned long long mask = (1 << rem) - 1;
     unsigned long long newsize =
         bn_size(a) - quot - (rem >= __builtin_clzll(a->ptr[bn_size(a) - 1]));
@@ -184,7 +184,7 @@ static inline void bn_srl(bn *result, bn *a, unsigned long long sha)
     for (; i < bn_size(a) - quot - 1; i++) {
         /* performance can be improve here */
         unsigned long long lhs_bits =
-            rem ? (a->ptr[i + quot + 1] & mask) << (N_BITS - rem) : 0;
+            rem ? (a->ptr[i + quot + 1] & mask) << (BITS - rem) : 0;
         result->ptr[i] = lhs_bits | (a->ptr[i + quot] >> rem);
     }
 
@@ -196,7 +196,7 @@ static inline void bn_srl(bn *result, bn *a, unsigned long long sha)
 static inline char *bn_hex(bn *a)
 {
 #define BUFSIZE 65536
-#define DIGITS (N_BITS >> 2)  // hex digits per unsigned long long number
+#define DIGITS (BITS >> 2)  // hex digits per unsigned long long number
 #define MASK 0xFull
     /* kzalloc - allocate memory. The memory is set to zero. */
     char *buf = kzalloc(BUFSIZE * sizeof(char), GFP_KERNEL);
@@ -210,7 +210,7 @@ static inline char *bn_hex(bn *a)
     }
 
     /* find first non-zero hex digit */
-    for (; !(tem & (MASK << (N_BITS - 4))); tem <<= 4, idx--)
+    for (; !(tem & (MASK << (BITS - 4))); tem <<= 4, idx--)
         ;
     buf[idx] = '\0';
 
