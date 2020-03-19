@@ -61,10 +61,8 @@ static char *fib_sequence(long long k)
 
     for (int i = 0; i < k; i++) {
         bn_add(&r, &fnext, &fcur);
-        bn tem = fcur;
-        fcur = fnext;
-        fnext = r;
-        r = tem;
+        bn_swap(&fcur, &fnext);
+        bn_swap(&fnext, &r);
     }
 
     return bn_hex(&fcur);
@@ -77,13 +75,13 @@ static char *fib_sequence(long long k)
     mask >>= off;
 
     bn fcur, fnext, t1, t2;
-    bn fnext2, fcur_sqrt, fnext_sqrt, tem1;
+    bn fnext2, fcur_sqrt, fnext_sqrt, tem;
     bn_init(&fcur);
     bn_init(&fnext);
     bn_init(&fnext2);
     bn_init(&t1);
     bn_init(&t2);
-    bn_init(&tem1);
+    bn_init(&tem);
     bn_init(&fcur_sqrt);
     bn_init(&fnext_sqrt);
 
@@ -97,20 +95,17 @@ static char *fib_sequence(long long k)
 
     for (; mask; mask >>= 1) {
         bn_sll(&fnext2, &fnext, 1);
-        bn_sub(&tem1, &fnext2, &fcur);
-        bn_mul(&t1, &tem1, &fcur);
+        bn_sub(&tem, &fnext2, &fcur);
+        bn_mul(&t1, &tem, &fcur);
         bn_mul(&fcur_sqrt, &fcur, &fcur);
         bn_mul(&fnext_sqrt, &fnext, &fnext);
         bn_add(&t2, &fcur_sqrt, &fnext_sqrt);
-        bn tem2 = fcur, tem3 = fnext;
-        fcur = t1, fnext = t2;
-        t1 = tem2, t2 = tem3;
+        bn_swap(&fcur, &t1);
+        bn_swap(&fnext, &t2);
         if (k & mask) {
             bn_add(&t1, &fcur, &fnext);
-            tem2 = fcur;
-            fcur = fnext;
-            fnext = t1;
-            t1 = tem2;
+            bn_swap(&fcur, &fnext);
+            bn_swap(&fnext, &t1);
         }
     }
 
