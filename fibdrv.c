@@ -9,6 +9,7 @@
 #include <linux/mutex.h>
 #include <linux/uaccess.h>
 
+
 #include "bignum.h"
 
 MODULE_LICENSE("Dual MIT/GPL");
@@ -27,6 +28,7 @@ static dev_t fib_dev = 0;
 static struct cdev *fib_cdev;
 static struct class *fib_class;
 static DEFINE_MUTEX(fib_mutex);
+struct kobject *kobj_ref;
 
 #ifndef BN
 static long long fib_sequence(long long k)
@@ -114,6 +116,45 @@ static char *fib_sequence(long long k)
 #endif
 #endif
 
+static ktime_t kt;
+static int kt_ns;
+static int n_th = 0;
+
+static ssize_t show(struct kobject *kobj,
+                    struct kobj_attribute *attr,
+                    char *buf)
+{
+    kt = ktime_get();
+    fib_sequence(n_th);
+    kt = ktime_sub(ktime_get(), kt);
+    kt_ns = (int) ktime_to_ns(kt);
+    return snprintf(buf, 16, "%d\n", kt_ns);
+}
+
+static ssize_t store(struct kobject *kobj,
+                     struct kobj_attribute *attr,
+                     const char *buf,
+                     size_t count)
+{
+    int ret;
+    ret = kstrtoint(buf, 10, &n_th);
+    printk("k: %d", n_th);
+    if (ret < 0)
+        return ret;
+    return count;
+}
+
+static struct kobj_attribute ktime_attr = __ATTR(kt_ns, 0664, show, store);
+
+static struct attribute *attrs[] = {
+    &ktime_attr.attr,
+    NULL,
+};
+
+static struct attribute_group attr_group = {
+    .attrs = attrs,
+};
+
 static int fib_open(struct inode *inode, struct file *file)
 {
     if (!mutex_trylock(&fib_mutex)) {
@@ -135,7 +176,9 @@ static ssize_t fib_read(struct file *file,
                         size_t size,
                         loff_t *offset)
 {
+    kt = ktime_get();
     char *fibnum = fib_sequence(*offset);
+    kt = ktime_sub(ktime_get(), kt);
     int len = strlen(fibnum);
     copy_to_user(buf, fibnum, (len + 1) * sizeof(char));
     kfree(fibnum);
@@ -215,6 +258,13 @@ static int __init init_fib_dev(void)
         goto failed_cdev;
     }
 
+    kobj_ref = kobject_create_and_add("kobj_ref", kernel_kobj);
+    if (!kobj_ref)
+        return -ENOMEM;
+
+    if (sysfs_create_group(kobj_ref, &attr_group))
+        kobject_put(kobj_ref);
+
     fib_class = class_create(THIS_MODULE, DEV_FIBONACCI_NAME);
 
     if (!fib_class) {
@@ -245,6 +295,7 @@ static void __exit exit_fib_dev(void)
     class_destroy(fib_class);
     cdev_del(fib_cdev);
     unregister_chrdev_region(fib_dev, 1);
+    kobject_put(kobj_ref);
 }
 
 module_init(init_fib_dev);
