@@ -132,6 +132,13 @@ static ssize_t store(struct kobject *kobj,
                      const char *buf,
                      size_t count)
 {
+    int ret, n_th;
+    ret = kstrtoint(buf, 10, &n_th);
+    kt = ktime_get();
+    fib_sequence(n_th);
+    kt = ktime_sub(ktime_get(), kt);
+    if (ret < 0)
+        return ret;
     return count;
 }
 
