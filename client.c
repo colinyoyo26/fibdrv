@@ -7,20 +7,25 @@
 #include <unistd.h>
 
 #define FIB_DEV "/dev/fibonacci"
-#define KOBJ "cat /sys/kernel/kobj_ref/kt_ns"
+#define KOBJ "/sys/kernel/kobj_ref/kt_ns"
 
 long long get_ktime()
 {
-    FILE *kobj = popen(KOBJ, "r");
+    int kobj = open(KOBJ, O_RDONLY);
+
     if (!kobj)
         return -1;
 
-    long long kt_ns = 0;
-    if (!fscanf(kobj, "%lld\n", &kt_ns))
-        kt_ns = -2;
+    char buf[32];
+    int len = pread(kobj, buf, 31, 0);
+    close(kobj);
 
-    fclose(kobj);
-    return kt_ns;
+    if (len < 0)
+        return -2;
+
+    buf[len - 1] = '\0';
+
+    return atol(buf);
 }
 
 static inline long long get_nanotime()
