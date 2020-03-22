@@ -47,6 +47,7 @@ check: all
 	$(MAKE) unload
 	$(MAKE) load
 	sudo ./client > out
+	@gnuplot scripts/plot.gp
 	$(MAKE) unload
 	@diff -u out scripts/expected_hex.txt && $(call pass)
 	@scripts/verify.py
