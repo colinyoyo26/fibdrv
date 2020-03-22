@@ -118,15 +118,11 @@ static char *fib_sequence(long long k)
 
 static ktime_t kt;
 static long long kt_ns;
-static int n_th = 0;
 
 static ssize_t show(struct kobject *kobj,
                     struct kobj_attribute *attr,
                     char *buf)
 {
-    kt = ktime_get();
-    fib_sequence(n_th);
-    kt = ktime_sub(ktime_get(), kt);
     kt_ns = ktime_to_ns(kt);
     return snprintf(buf, 16, "%lld\n", kt_ns);
 }
@@ -136,10 +132,6 @@ static ssize_t store(struct kobject *kobj,
                      const char *buf,
                      size_t count)
 {
-    int ret;
-    ret = kstrtoint(buf, 10, &n_th);
-    if (ret < 0)
-        return ret;
     return count;
 }
 
