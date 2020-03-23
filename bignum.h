@@ -123,22 +123,33 @@ static inline void bn_sub(bn *result, bn *a, bn *b)
 }
 
 static inline void bn_sll(bn *result, bn *a, unsigned long long sha);
+static inline void bn_sll(bn *result, bn *a, unsigned long long sha);
 static inline void bn_mul(bn *result, bn *a, bn *b)
 {
-    if (bn_capacity(result) < bn_size(a) + bn_size(b))
-        bn_resize(result, bn_size(a) + bn_size(b));
+    bn r = *result;
+    unsigned long long *be_free = NULL;
 
+    if (result == a || result == b) {
+        bn_init(&r);
+        be_free = result->ptr;
+    }
+
+    if (bn_capacity(&r) < bn_size(a) + bn_size(b))
+        bn_resize(&r, bn_size(a) + bn_size(b));
     bn tem;
     bn_init(&tem);
-    bn_assign(result, 0);
+    bn_assign(&r, 0);
 
     unsigned long long check_bit = 1;
     for (int i = 0; i < bn_size(a); i++, check_bit = 1)
         for (int j = 0; j < BITS; j++, check_bit <<= 1)
             if (check_bit & a->ptr[i]) {
                 bn_sll(&tem, b, (i << BITS_TZ) + j);
-                bn_add(result, result, &tem);
+                bn_add(&r, &r, &tem);
             }
+
+    *result = r;
+    kfree(be_free);
     kfree(tem.ptr);
 }
 
