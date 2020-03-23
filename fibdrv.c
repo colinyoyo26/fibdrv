@@ -67,7 +67,13 @@ static char *fib_sequence(long long k)
         bn_swap(&fnext, &r);
     }
 
-    return bn_hex(&fcur);
+    char *buf = bn_hex(&fcur);
+
+    bn_free(&fcur);
+    bn_free(&fnext);
+    bn_free(&r);
+
+    return buf;
 }
 #else
 
@@ -109,7 +115,15 @@ static char *fib_sequence(long long k)
         }
     }
 
-    return bn_hex(&fcur);
+    char *buf = bn_hex(&fcur);
+
+    bn_free(&fcur);
+    bn_free(&fnext);
+    bn_free(&t1);
+    bn_free(&t2);
+    bn_free(&fcur_sqrt);
+
+    return buf;
 }
 #endif
 #endif

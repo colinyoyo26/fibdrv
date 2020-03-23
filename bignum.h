@@ -206,6 +206,12 @@ static inline void bn_srl(bn *result, bn *a, unsigned long long sha)
         ;
 }
 
+static inline void bn_free(bn *a)
+{
+    kfree(a->ptr);
+    a->ptr = NULL;
+}
+
 static inline char *bn_hex(bn *a)
 {
 #define BUFSIZE 65536
