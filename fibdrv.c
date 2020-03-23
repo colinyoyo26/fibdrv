@@ -70,6 +70,7 @@ static char *fib_sequence(long long k)
     return bn_hex(&fcur);
 }
 #else
+
 static char *fib_sequence(long long k)
 {
     unsigned long long mask = 1ull << (BITS - 1);
@@ -77,15 +78,12 @@ static char *fib_sequence(long long k)
     mask >>= off;
 
     bn fcur, fnext, t1, t2;
-    bn fnext2, fcur_sqrt, fnext_sqrt, tem;
+    bn fcur_sqrt;
     bn_init(&fcur);
     bn_init(&fnext);
-    bn_init(&fnext2);
     bn_init(&t1);
     bn_init(&t2);
-    bn_init(&tem);
     bn_init(&fcur_sqrt);
-    bn_init(&fnext_sqrt);
 
     bn_assign(&fcur, 1);
     bn_assign(&fnext, 1);
@@ -96,12 +94,12 @@ static char *fib_sequence(long long k)
     }
 
     for (; mask; mask >>= 1) {
-        bn_sll(&fnext2, &fnext, 1);
-        bn_sub(&tem, &fnext2, &fcur);
-        bn_mul(&t1, &tem, &fcur);
+        bn_sll(&t1, &fnext, 1);
+        bn_sub(&t1, &t1, &fcur);
+        bn_mul(&t1, &t1, &fcur);
         bn_mul(&fcur_sqrt, &fcur, &fcur);
-        bn_mul(&fnext_sqrt, &fnext, &fnext);
-        bn_add(&t2, &fcur_sqrt, &fnext_sqrt);
+        bn_mul(&t2, &fnext, &fnext);
+        bn_add(&t2, &t2, &fcur_sqrt);
         bn_swap(&fcur, &t1);
         bn_swap(&fnext, &t2);
         if (k & mask) {
