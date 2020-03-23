@@ -89,10 +89,8 @@ static inline void bn_add(bn *result, bn *a, bn *b)
     for (i = 0; i < bn_size(b); i++) {
         unsigned long long a_val = a->ptr[i];
         unsigned long long b_val = b->ptr[i];
-        /* it's fine to overflow */
-        result->ptr[i] = a_val + b_val + carry;
-        /* thinking about strength reduction */
-        carry = ((a_val + carry > ~b_val) || (a_val > ~carry));
+        carry = (a_val += carry) < carry;
+        carry += (result->ptr[i] = a_val + b_val) < b_val;
     }
     for (; i < size; i++) {
         unsigned long long a_val = a->ptr[i];
